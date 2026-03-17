@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiToDo</title>
+<style>
+body {
+  font-family: sans-serif;
+  background: #f5f5f5;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+#inputArea {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+input, select {
+  padding: 10px;
+  font-size: 16px;
+  max-width: 100%;
+}
+
+input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+button {
+  padding: 12px 16px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+li {
+  list-style: none;
+  background: white;
+  margin-bottom: 10px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+}
+
+.done {
+  text-decoration: line-through;
+  color: gray;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+  }
+
+  #inputArea {
+    flex-direction: column;
+  }
+
+  #inputArea input,
+  #inputArea select,
+  #inputArea button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  li {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  li select {
+    width: 100%;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<h1>MiToDo</h1>
+
+<div id="inputArea">
+  <input id="taskInput" placeholder="やることを書く">
+
+<select id="colorSelect">
+  <option value="black">⚪</option>
+  <option value="purple">🟣</option>
+  <option value="green">🟢</option>
+  <option value="blue">🔵</option>
+  <option value="red">🔴</option>
+  <option value="orange">🟠</option>
+  <option value="pink">🩷</option>
+  <option value="gray">⚫</option>
+</select>
+
+  <button onclick="addTask()">追加</button>
+</div>
+
+<ul id="taskList"></ul>
+
+<script>
+let tasks = [];
+
+let currentMemoIndex = null;
+
+function renderMemoLinks(text) {
+  const memoLinks = document.getElementById("memoLinks");
+  if (!memoLinks) return;
+
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const matches = text.match(urlRegex);
+
+  if (!matches) {
+    memoLinks.innerHTML = "";
+    return;
+  }
+
+  memoLinks.innerHTML = matches
+    .map(url => `<div><a href="${url}" target="_blank">${url}</a></div>`)
+    .join("");
+}
+
+function save() {
+  localStorage.setItem("mitodo", JSON.stringify(tasks));
+}
+
+function load() {
+  const data = localStorage.getItem("mitodo");
+  if (data) {
+    tasks = JSON.parse(data);
+    render();
+  }
+}
+
+function addTask() {
+  const input = document.getElementById("taskInput");
+  const color = document.getElementById("colorSelect").value;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  tasks.push({ text: text, done: false, color: color, memo: "" });
+  input.value = "";
+  save();
+  render();
+}
+
+function toggle(index) {
+  tasks[index].done = !tasks[index].done;
+  save();
+  render();
+}
+
+function changeColor(index, newColor) {
+  tasks[index].color = newColor;
+  save();
+  render();
+}
+
+function editMemo(index) {
+  currentMemoIndex = index;
+  const currentMemo = tasks[index].memo || "";
+  document.getElementById("memoTextarea").value = currentMemo;
+  renderMemoLinks(currentMemo);
+  document.getElementById("memoModal").style.display = "block";
+}
+
+function saveMemo() {
+  if (currentMemoIndex === null) return;
+
+  const memoText = document.getElementById("memoTextarea").value;
+  tasks[currentMemoIndex].memo = memoText;
+  save();
+  render();
+  renderMemoLinks(memoText);
+  closeMemo();
+}
+
+function closeMemo() {
+  document.getElementById("memoModal").style.display = "none";
+  currentMemoIndex = null;
+}
+
+function render() {
+  const list = document.getElementById("taskList");
+  list.innerHTML = "";
+
+  tasks.forEach((task, index) => {
+    const li = document.createElement("li");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = task.done;
+    checkbox.onclick = () => toggle(index);
+
+const span = document.createElement("span");
+
+if (task.memo && task.memo.trim() !== "") {
+  span.textContent = "📝 " + task.text;
+  span.style.textDecoration = "underline";
+} else {
+  span.textContent = task.text;
+}
+
+span.onclick = () => editMemo(index);
+span.style.cursor = "pointer";
+span.style.color = task.color;
+    if (task.done) span.classList.add("done");
+
+    const colorSelect = document.createElement("select");
+    ["black","purple","green","blue","red","orange","pink","gray"].forEach(c => {
+      const option = document.createElement("option");
+      option.value = c;
+
+       const colorMap = {
+  black: "⚪",
+  purple: "🟣",
+  green: "🟢",
+  blue: "🔵",
+  red: "🔴",
+  orange: "🟠",
+  pink: "🩷",
+  gray: "⚫"
+};
+
+      option.textContent = colorMap[c];
+      if (task.color === c) option.selected = true;
+      colorSelect.appendChild(option);
+    });
+
+    colorSelect.onchange = (e) => changeColor(index, e.target.value);
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(colorSelect);
+
+    list.appendChild(li);
+  });
+}
+window.onload = function() {
+  load();
+
+  const memoTextarea = document.getElementById("memoTextarea");
+  if (memoTextarea) {
+    memoTextarea.addEventListener("input", function() {
+      renderMemoLinks(this.value);
+    });
+  }
+};
+</script>
+
+<div id="memoModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4);">
+  <div style="background:white; width:90%; max-width:500px; margin:80px auto; padding:20px; border-radius:12px;">
+    <h2 style="margin-top:0;">メモ</h2>
+    <textarea id="memoTextarea" style="width:100%; height:220px; font-size:16px; padding:10px; box-sizing:border-box;"></textarea>
+
+<div id="memoLinks" style="margin-top:10px; font-size:14px;"></div>
+
+
+    <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="closeMemo()">キャンセル</button>
+      <button onclick="saveMemo()">保存</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
