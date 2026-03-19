@@ -15,7 +15,18 @@ h1 {
   text-align: center;
 }
 
+#viewDateArea {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#viewDate {
+  padding: 10px;
+  font-size: 16px;
+}
+
 #inputArea {
+
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
@@ -37,6 +48,11 @@ button {
   padding: 12px 16px;
   font-size: 16px;
   cursor: pointer;
+}
+
+.delete-btn {
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
 li {
@@ -91,7 +107,12 @@ li {
 
 <h1>MiToDo</h1>
 
+<div id="viewDateArea">
+  <input type="date" id="viewDate">
+</div>
+
 <div id="inputArea">
+
   <input id="taskInput" placeholder="やることを書く">
 
 <select id="colorSelect">
@@ -105,7 +126,14 @@ li {
   <option value="gray">⚫</option>
 </select>
 
-  <button onclick="addTask()">追加</button>
+<select id="typeSelect">
+  <option value="single">単発</option>
+  <option value="routine">ルーティン</option>
+</select>
+
+<input type="date" id="dateInput">
+
+<button onclick="addTask()">追加</button>
 </div>
 
 <ul id="taskList"></ul>
@@ -114,6 +142,7 @@ li {
 let tasks = [];
 
 let currentMemoIndex = null;
+let selectedDate = new Date().toISOString().split("T")[0];
 
 function renderMemoLinks(text) {
   const memoLinks = document.getElementById("memoLinks");
@@ -139,26 +168,67 @@ function save() {
 function load() {
   const data = localStorage.getItem("mitodo");
   if (data) {
-    tasks = JSON.parse(data);
+    tasks = JSON.parse(data).map(task => ({
+     text: task.text || "",
+     done: task.done || false,
+     color: task.color || "black",
+     memo: task.memo || "",
+     type: task.type || "single",
+     date: task.date || "",
+     doneDates: task.doneDates || []
+     }));
+
     render();
   }
 }
 
+
 function addTask() {
   const input = document.getElementById("taskInput");
   const color = document.getElementById("colorSelect").value;
+  const type = document.getElementById("typeSelect").value;
+  const date = document.getElementById("dateInput").value;
 
   const text = input.value.trim();
   if (!text) return;
 
-  tasks.push({ text: text, done: false, color: color, memo: "" });
+  if (type === "single" && !date) {
+    alert("単発タスクは日付を選んでね");
+    return;
+  }
+
+ tasks.push({
+  text: text,
+  done: false,
+  color: color,
+  memo: "",
+  type: type,
+  date: type === "single" ? date : "",
+  doneDates: []
+});
+
   input.value = "";
+  document.getElementById("dateInput").value = selectedDate;
   save();
   render();
 }
 
 function toggle(index) {
-  tasks[index].done = !tasks[index].done;
+  if (tasks[index].type === "routine") {
+    const doneDates = tasks[index].doneDates || [];
+    const dateIndex = doneDates.indexOf(selectedDate);
+
+    if (dateIndex === -1) {
+      doneDates.push(selectedDate);
+    } else {
+      doneDates.splice(dateIndex, 1);
+    }
+
+    tasks[index].doneDates = doneDates;
+  } else {
+    tasks[index].done = !tasks[index].done;
+  }
+
   save();
   render();
 }
@@ -193,31 +263,66 @@ function closeMemo() {
   currentMemoIndex = null;
 }
 
+function deleteTask(index) {
+  const okDelete = confirm("このタスクを削除しますか？");
+  if (!okDelete) return;
+
+  tasks.splice(index, 1);
+  save();
+  render();
+}
+
+
 function render() {
   const list = document.getElementById("taskList");
   list.innerHTML = "";
 
   tasks.forEach((task, index) => {
+
+    if (task.type === "single" && task.date !== selectedDate) return;
+
     const li = document.createElement("li");
+
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = task.done;
+
+    if (task.type === "routine") {
+      checkbox.checked = (task.doneDates || []).includes(selectedDate);
+    } else {
+      checkbox.checked = task.done;
+    }
+
     checkbox.onclick = () => toggle(index);
 
 const span = document.createElement("span");
 
+let label = task.text;
+
+if (task.type === "routine") {
+  label += " [毎日]";
+} else if (task.date) {
+  label += " [" + task.date + "]";
+}
+
 if (task.memo && task.memo.trim() !== "") {
-  span.textContent = "📝 " + task.text;
+  span.textContent = "📝 " + label;
   span.style.textDecoration = "underline";
 } else {
-  span.textContent = task.text;
+  span.textContent = label;
 }
+
 
 span.onclick = () => editMemo(index);
 span.style.cursor = "pointer";
 span.style.color = task.color;
-    if (task.done) span.classList.add("done");
+    if (task.type === "routine") {
+  if ((task.doneDates || []).includes(selectedDate)) {
+    span.classList.add("done");
+  }
+} else {
+  if (task.done) span.classList.add("done");
+  }
 
     const colorSelect = document.createElement("select");
     ["black","purple","green","blue","red","orange","pink","gray"].forEach(c => {
@@ -242,9 +347,15 @@ span.style.color = task.color;
 
     colorSelect.onchange = (e) => changeColor(index, e.target.value);
 
+      const deleteButton = document.createElement("button");
+      deleteButton.textContent = "削除";
+      deleteButton.className = "delete-btn";
+      deleteButton.onclick = () => deleteTask(index);
+
     li.appendChild(checkbox);
     li.appendChild(span);
     li.appendChild(colorSelect);
+    li.appendChild(deleteButton);
 
     list.appendChild(li);
   });
@@ -252,7 +363,23 @@ span.style.color = task.color;
 window.onload = function() {
   load();
 
+  const viewDate = document.getElementById("viewDate");
+  if (viewDate) {
+    viewDate.value = selectedDate;
+    viewDate.addEventListener("change", function() {
+      selectedDate = this.value;
+      render();
+    });
+  }
+
+const dateInput = document.getElementById("dateInput");
+if (dateInput) {
+  dateInput.value = selectedDate;
+}
+
   const memoTextarea = document.getElementById("memoTextarea");
+
+
   if (memoTextarea) {
     memoTextarea.addEventListener("input", function() {
       renderMemoLinks(this.value);
