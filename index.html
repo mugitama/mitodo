@@ -26,11 +26,20 @@ h1 {
 }
 
 #inputArea {
-
-  display: flex;
+  display: grid;
+  grid-template-columns: 150px 80px 110px minmax(240px, 1fr) 80px;
   gap: 10px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
+  align-items: center;
+}
+
+#dateInput,
+#colorSelect,
+#typeSelect,
+#taskInput,
+#inputArea button {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 input, select {
@@ -39,8 +48,7 @@ input, select {
   max-width: 100%;
 }
 
-input {
-  flex: 1 1 220px;
+#taskInput {
   min-width: 0;
 }
 
@@ -81,14 +89,28 @@ li {
   }
 
   #inputArea {
-    flex-direction: column;
+    grid-template-columns: 110px 70px 1fr;
+    gap: 8px;
   }
 
-  #inputArea input,
-  #inputArea select,
+  #dateInput {
+    grid-column: 1 / 2;
+  }
+
+  #colorSelect {
+    grid-column: 2 / 3;
+  }
+
+  #typeSelect {
+    grid-column: 3 / 4;
+  }
+
+  #taskInput {
+    grid-column: 1 / 3;
+  }
+
   #inputArea button {
-    width: 100%;
-    box-sizing: border-box;
+    grid-column: 3 / 4;
   }
 
   li {
@@ -100,7 +122,6 @@ li {
     width: 100%;
   }
 }
-
 </style>
 </head>
 <body>
@@ -113,27 +134,27 @@ li {
 
 <div id="inputArea">
 
+  <input type="date" id="dateInput">
+
+  <select id="colorSelect">
+    <option value="black">⚪</option>
+    <option value="purple">🟣</option>
+    <option value="green">🟢</option>
+    <option value="blue">🔵</option>
+    <option value="red">🔴</option>
+    <option value="orange">🟠</option>
+    <option value="pink">🩷</option>
+    <option value="gray">⚫</option>
+  </select>
+
+  <select id="typeSelect">
+    <option value="single">単発</option>
+    <option value="routine">ルーティン</option>
+  </select>
+
   <input id="taskInput" placeholder="やることを書く">
 
-<select id="colorSelect">
-  <option value="black">⚪</option>
-  <option value="purple">🟣</option>
-  <option value="green">🟢</option>
-  <option value="blue">🔵</option>
-  <option value="red">🔴</option>
-  <option value="orange">🟠</option>
-  <option value="pink">🩷</option>
-  <option value="gray">⚫</option>
-</select>
-
-<select id="typeSelect">
-  <option value="single">単発</option>
-  <option value="routine">ルーティン</option>
-</select>
-
-<input type="date" id="dateInput">
-
-<button onclick="addTask()">追加</button>
+  <button onclick="addTask()">追加</button>
 </div>
 
 <ul id="taskList"></ul>
@@ -169,19 +190,18 @@ function load() {
   const data = localStorage.getItem("mitodo");
   if (data) {
     tasks = JSON.parse(data).map(task => ({
-     text: task.text || "",
-     done: task.done || false,
-     color: task.color || "black",
-     memo: task.memo || "",
-     type: task.type || "single",
-     date: task.date || "",
-     doneDates: task.doneDates || []
-     }));
+      text: task.text || "",
+      done: task.done || false,
+      color: task.color || "black",
+      memo: task.memo || "",
+      type: task.type || "single",
+      date: task.date || "",
+      doneDates: task.doneDates || []
+    }));
 
     render();
   }
 }
-
 
 function addTask() {
   const input = document.getElementById("taskInput");
@@ -197,15 +217,15 @@ function addTask() {
     return;
   }
 
- tasks.push({
-  text: text,
-  done: false,
-  color: color,
-  memo: "",
-  type: type,
-  date: type === "single" ? date : "",
-  doneDates: []
-});
+  tasks.push({
+    text: text,
+    done: false,
+    color: color,
+    memo: "",
+    type: type,
+    date: type === "single" ? date : "",
+    doneDates: []
+  });
 
   input.value = "";
   document.getElementById("dateInput").value = selectedDate;
@@ -272,7 +292,6 @@ function deleteTask(index) {
   render();
 }
 
-
 function render() {
   const list = document.getElementById("taskList");
   list.innerHTML = "";
@@ -282,7 +301,6 @@ function render() {
     if (task.type === "single" && task.date !== selectedDate) return;
 
     const li = document.createElement("li");
-
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -295,50 +313,50 @@ function render() {
 
     checkbox.onclick = () => toggle(index);
 
-const span = document.createElement("span");
+    const span = document.createElement("span");
 
-let label = task.text;
+    let label = task.text;
 
-if (task.type === "routine") {
-  label += " [毎日]";
-} else if (task.date) {
-  label += " [" + task.date + "]";
-}
-
-if (task.memo && task.memo.trim() !== "") {
-  span.textContent = "📝 " + label;
-  span.style.textDecoration = "underline";
-} else {
-  span.textContent = label;
-}
-
-
-span.onclick = () => editMemo(index);
-span.style.cursor = "pointer";
-span.style.color = task.color;
     if (task.type === "routine") {
-  if ((task.doneDates || []).includes(selectedDate)) {
-    span.classList.add("done");
-  }
-} else {
-  if (task.done) span.classList.add("done");
-  }
+      label += " [毎日]";
+    } else if (task.date) {
+      label += " [" + task.date + "]";
+    }
+
+    if (task.memo && task.memo.trim() !== "") {
+      span.textContent = "📝 " + label;
+      span.style.textDecoration = "underline";
+    } else {
+      span.textContent = label;
+    }
+
+    span.onclick = () => editMemo(index);
+    span.style.cursor = "pointer";
+    span.style.color = task.color;
+
+    if (task.type === "routine") {
+      if ((task.doneDates || []).includes(selectedDate)) {
+        span.classList.add("done");
+      }
+    } else {
+      if (task.done) span.classList.add("done");
+    }
 
     const colorSelect = document.createElement("select");
     ["black","purple","green","blue","red","orange","pink","gray"].forEach(c => {
       const option = document.createElement("option");
       option.value = c;
 
-       const colorMap = {
-  black: "⚪",
-  purple: "🟣",
-  green: "🟢",
-  blue: "🔵",
-  red: "🔴",
-  orange: "🟠",
-  pink: "🩷",
-  gray: "⚫"
-};
+      const colorMap = {
+        black: "⚪",
+        purple: "🟣",
+        green: "🟢",
+        blue: "🔵",
+        red: "🔴",
+        orange: "🟠",
+        pink: "🩷",
+        gray: "⚫"
+      };
 
       option.textContent = colorMap[c];
       if (task.color === c) option.selected = true;
@@ -347,10 +365,10 @@ span.style.color = task.color;
 
     colorSelect.onchange = (e) => changeColor(index, e.target.value);
 
-      const deleteButton = document.createElement("button");
-      deleteButton.textContent = "削除";
-      deleteButton.className = "delete-btn";
-      deleteButton.onclick = () => deleteTask(index);
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "削除";
+    deleteButton.className = "delete-btn";
+    deleteButton.onclick = () => deleteTask(index);
 
     li.appendChild(checkbox);
     li.appendChild(span);
@@ -360,6 +378,7 @@ span.style.color = task.color;
     list.appendChild(li);
   });
 }
+
 window.onload = function() {
   load();
 
@@ -368,17 +387,22 @@ window.onload = function() {
     viewDate.value = selectedDate;
     viewDate.addEventListener("change", function() {
       selectedDate = this.value;
+
+      const dateInput = document.getElementById("dateInput");
+      if (dateInput) {
+        dateInput.value = selectedDate;
+      }
+
       render();
     });
   }
 
-const dateInput = document.getElementById("dateInput");
-if (dateInput) {
-  dateInput.value = selectedDate;
-}
+  const dateInput = document.getElementById("dateInput");
+  if (dateInput) {
+    dateInput.value = selectedDate;
+  }
 
   const memoTextarea = document.getElementById("memoTextarea");
-
 
   if (memoTextarea) {
     memoTextarea.addEventListener("input", function() {
@@ -393,8 +417,7 @@ if (dateInput) {
     <h2 style="margin-top:0;">メモ</h2>
     <textarea id="memoTextarea" style="width:100%; height:220px; font-size:16px; padding:10px; box-sizing:border-box;"></textarea>
 
-<div id="memoLinks" style="margin-top:10px; font-size:14px;"></div>
-
+    <div id="memoLinks" style="margin-top:10px; font-size:14px;"></div>
 
     <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
       <button onclick="closeMemo()">キャンセル</button>
