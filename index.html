@@ -121,24 +121,30 @@ li {
 
   li {
     display: grid;
-    grid-template-columns: 24px 1fr;
-    gap: 10px;
+    grid-template-columns: 24px minmax(0, 1fr) 54px 56px;
+    gap: 8px;
     align-items: center;
   }
 
   li span {
     grid-column: 2 / 3;
-    font-size: 20px;
+    font-size: 18px;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   li select {
-    grid-column: 2 / 3;
-    width: 64px;
+    grid-column: 3 / 4;
+    width: 54px;
+    padding: 6px 2px;
+    font-size: 14px;
   }
 
   li .delete-btn {
-    grid-column: 2 / 3;
-    width: 70px;
+    grid-column: 4 / 5;
+    width: 56px;
+    padding: 6px 4px;
+    font-size: 14px;
   }
 }
 </style>
